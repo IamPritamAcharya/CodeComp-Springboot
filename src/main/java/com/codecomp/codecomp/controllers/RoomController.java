@@ -1,5 +1,7 @@
 package com.codecomp.codecomp.controllers;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -8,6 +10,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,6 +18,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
+import com.codecomp.codecomp.dto.EndContestResponse;
+import com.codecomp.codecomp.dto.LeaderboardResponse;
 import com.codecomp.codecomp.dto.SubmissionRequest;
 import com.codecomp.codecomp.models.Participant;
 import com.codecomp.codecomp.models.Problem;
@@ -295,5 +300,86 @@ public class RoomController {
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body("Submission failed");
         }
+    }
+
+    @GetMapping("/leaderboard")
+    public ResponseEntity<?> getLeaderboard(@RequestParam Long roomId) {
+
+        // validate room
+        Room room = roomRepository.findById(roomId).orElse(null);
+
+        if (room == null) {
+            return ResponseEntity.badRequest().body("Room not found");
+        }
+
+        List<Participant> participants = participantRepository.findByRoomId(roomId);
+
+        if (participants.isEmpty()) {
+            return ResponseEntity.ok(Collections.emptyList());
+        }
+
+        participants.sort((a, b) -> b.getScore().compareTo(a.getScore()));
+
+        List<LeaderboardResponse> leaderboard = new ArrayList<>();
+        int rank = 1;
+
+        for (int i = 0; i < participants.size(); i++) {
+
+            if (i > 0 && !participants.get(i).getScore().equals(participants.get(i - 1).getScore())) {
+                rank = i + 1;
+            }
+
+            leaderboard.add(new LeaderboardResponse(
+                    participants.get(i).getUserId(),
+                    participants.get(i).getScore(),
+                    rank));
+        }
+
+        return ResponseEntity.ok(leaderboard);
+    }
+
+    @PostMapping("/end")
+    public ResponseEntity<?> endContest(@RequestParam Long roomId) {
+
+        // validate room
+        Room room = roomRepository.findById(roomId).orElse(null);
+
+        if (room == null) {
+            return ResponseEntity.badRequest().body("Room not found");
+        }
+
+        if (!"ACTIVE".equalsIgnoreCase(room.getStatus())) {
+            return ResponseEntity.badRequest().body("Contest not active");
+        }
+
+        List<Participant> participants = participantRepository.findByRoomId(roomId);
+
+        if (participants.size() != 2) {
+            return ResponseEntity.badRequest().body("Invalid participant count");
+        }
+
+        Participant p1 = participants.get(0);
+        Participant p2 = participants.get(1);
+
+        Long winnerUserId = null;
+        String result;
+
+        if (p1.getScore() > p2.getScore()) {
+            winnerUserId = p1.getUserId();
+            result = "WIN";
+        } else if (p2.getScore() > p1.getScore()) {
+            winnerUserId = p2.getUserId();
+            result = "WIN";
+        } else {
+            result = "DRAW";
+        }
+
+        room.setStatus("FINISHED");
+        roomRepository.save(room);
+
+        EndContestResponse response = new EndContestResponse(winnerUserId, result);
+
+        return ResponseEntity.ok(response);
+
     }
 }
