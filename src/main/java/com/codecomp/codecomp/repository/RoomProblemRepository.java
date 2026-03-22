@@ -1,0 +1,8 @@
+package com.codecomp.codecomp.repository;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.codecomp.codecomp.models.RoomProblem;
+
+public interface RoomProblemRepository extends JpaRepository<RoomProblem, Long> {
+}
