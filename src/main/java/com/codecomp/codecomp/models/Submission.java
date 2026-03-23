@@ -23,6 +23,8 @@ public class Submission {
 
     private String status;
 
+    private Integer languageId;
+
     private Long createdAt;
 
 }

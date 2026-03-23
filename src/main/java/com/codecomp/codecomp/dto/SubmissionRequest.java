@@ -9,4 +9,5 @@ public class SubmissionRequest {
     private Long roomId;
     private Long problemId;
     private String code;
+    private Integer languageId;
 }
