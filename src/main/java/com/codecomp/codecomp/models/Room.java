@@ -21,4 +21,6 @@ public class Room {
     private Long startTime;
     
     private Long endTime;
+
+    private Long duration; // in milliseconds
 }

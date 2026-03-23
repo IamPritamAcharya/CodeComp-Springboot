@@ -12,6 +12,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.stereotype.Service;
 
+import com.codecomp.codecomp.dto.RoomStateResponse;
 import com.codecomp.codecomp.dto.SubmissionRequest;
 import com.codecomp.codecomp.dto.SubmissionUpdate;
 import com.codecomp.codecomp.models.Participant;
@@ -19,12 +20,14 @@ import com.codecomp.codecomp.models.ParticipantProblem;
 import com.codecomp.codecomp.models.Room;
 import com.codecomp.codecomp.models.Submission;
 import com.codecomp.codecomp.models.TestCase;
+import com.codecomp.codecomp.redis.RedisPublisher;
 import com.codecomp.codecomp.repository.ParticipantProblemRepository;
 import com.codecomp.codecomp.repository.ParticipantRepository;
 import com.codecomp.codecomp.repository.RoomProblemRepository;
 import com.codecomp.codecomp.repository.RoomRepository;
 import com.codecomp.codecomp.repository.SubmissionRepository;
 import com.codecomp.codecomp.repository.TestCaseRepository;
+import com.codecomp.codecomp.room.RoomService;
 
 import lombok.RequiredArgsConstructor;
 import tools.jackson.databind.ObjectMapper;
@@ -42,6 +45,8 @@ public class SubmissionService {
     private final TestCaseRepository testCaseRepository;
 
     private final SimpMessagingTemplate messagingTemplate;
+    private final RoomService roomService;
+    private final RedisPublisher redisPublisher;
 
     public Map<String, Object> submit(SubmissionRequest req) throws Exception {
 
@@ -155,9 +160,9 @@ public class SubmissionService {
         System.out.println("Sending WS update: " + update);
         System.out.println("RoomId: " + roomId);
 
-        messagingTemplate.convertAndSend(
-                "/topic/room/" + roomId,
-                update);
+        RoomStateResponse state = roomService.getRoomState(roomId);
+
+        redisPublisher.publish("room-updates", state);
 
         Map<String, Object> result = new HashMap<>();
         result.put("status", statusDescription);

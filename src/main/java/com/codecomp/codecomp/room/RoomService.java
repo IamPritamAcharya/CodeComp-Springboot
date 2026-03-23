@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import com.codecomp.codecomp.dto.EndContestResponse;
 import com.codecomp.codecomp.dto.LeaderboardResponse;
+import com.codecomp.codecomp.dto.RoomStateResponse;
 import com.codecomp.codecomp.models.Participant;
 import com.codecomp.codecomp.models.ParticipantProblem;
 import com.codecomp.codecomp.models.Problem;
@@ -57,12 +58,24 @@ public class RoomService {
         for (Long userId : userMap.keySet()) {
 
             int solved = 0;
-            int totalPenalty = 0;
+            long totalPenalty = 0;
+            long lastSolvedTime = Long.MAX_VALUE;
 
             for (ParticipantProblem pp : userMap.get(userId)) {
-                if (Boolean.TRUE.equals(pp.getSolved())) {
+                if (Boolean.TRUE.equals(pp.getSolved()) &&
+                        pp.getSolvedAt() != null &&
+                        room.getStartTime() != null) {
+
                     solved++;
-                    totalPenalty += pp.getPenalty();
+
+                    long timeTaken = (pp.getSolvedAt() - room.getStartTime()) / 1000;
+
+                    long problemPenalty = pp.getPenalty() * 600L + timeTaken;
+
+                    totalPenalty += problemPenalty;
+
+                    // track latest solved problem time
+                    lastSolvedTime = Math.min(lastSolvedTime, pp.getSolvedAt());
                 }
             }
 
@@ -70,18 +83,21 @@ public class RoomService {
                     userId,
                     solved,
                     totalPenalty,
-                    0 // rank will be assigned later
-            ));
+                    lastSolvedTime,
+                    0));
         }
 
         // sort:
-        // 1. solved DESC
-        // 2. penalty ASC
         leaderboard.sort((a, b) -> {
             if (!b.getSolved().equals(a.getSolved())) {
                 return b.getSolved() - a.getSolved();
             }
-            return a.getPenalty() - b.getPenalty();
+
+            int penaltyCompare = Long.compare(a.getPenalty(), b.getPenalty());
+            if (penaltyCompare != 0)
+                return penaltyCompare;
+
+            return Long.compare(a.getLastSolvedTime(), b.getLastSolvedTime());
         });
 
         // assign ranks
@@ -245,10 +261,9 @@ public class RoomService {
             roomProblemRepository.save(rp);
         }
 
-        // Fetch assigned problems 
+        // Fetch assigned problems
         List<RoomProblem> roomProblems = roomProblemRepository.findByRoomId(roomId);
 
-        // Initialize ParticipantProblem for each user + problem
         for (Participant participant : participants) {
 
             for (RoomProblem rp : roomProblems) {
@@ -275,10 +290,25 @@ public class RoomService {
         }
 
         room.setStartTime(System.currentTimeMillis());
+        room.setDuration(10 * 60 * 1000L);
 
         room.setStatus("ACTIVE");
         roomRepository.save(room);
 
         return "Contest started";
     }
+
+   public RoomStateResponse getRoomState(Long roomId) {
+
+    List<LeaderboardResponse> leaderboard = getLeaderboard(roomId);
+
+    List<ParticipantProblem> problems =
+            participantProblemRepository.findByRoomId(roomId);
+
+    return new RoomStateResponse(
+            roomId,       
+            leaderboard,
+            problems
+    );
+}
 }
