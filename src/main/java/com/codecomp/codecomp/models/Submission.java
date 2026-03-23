@@ -23,4 +23,6 @@ public class Submission {
 
     private String status;
 
+    private Long createdAt;
+
 }

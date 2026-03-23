@@ -2,16 +2,20 @@ package com.codecomp.codecomp.room;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.stereotype.Service;
 
 import com.codecomp.codecomp.dto.EndContestResponse;
 import com.codecomp.codecomp.dto.LeaderboardResponse;
 import com.codecomp.codecomp.models.Participant;
+import com.codecomp.codecomp.models.ParticipantProblem;
 import com.codecomp.codecomp.models.Problem;
 import com.codecomp.codecomp.models.Room;
 import com.codecomp.codecomp.models.RoomProblem;
+import com.codecomp.codecomp.repository.ParticipantProblemRepository;
 import com.codecomp.codecomp.repository.ParticipantRepository;
 import com.codecomp.codecomp.repository.ProblemRepository;
 import com.codecomp.codecomp.repository.RoomProblemRepository;
@@ -27,34 +31,72 @@ public class RoomService {
     private final ParticipantRepository participantRepository;
     private final ProblemRepository problemRepository;
     private final RoomProblemRepository roomProblemRepository;
+    private final ParticipantProblemRepository participantProblemRepository;
 
     public List<LeaderboardResponse> getLeaderboard(Long roomId) {
 
-        // validate room
         Room room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new RuntimeException("Room not found"));
 
-        List<Participant> participants = participantRepository.findByRoomId(roomId);
+        List<ParticipantProblem> ppList = participantProblemRepository.findByRoomId(roomId);
 
-        if (participants.isEmpty()) {
+        if (ppList.isEmpty()) {
             return Collections.emptyList();
         }
 
-        participants.sort((a, b) -> b.getScore().compareTo(a.getScore()));
+        // group by user
+        Map<Long, List<ParticipantProblem>> userMap = new HashMap<>();
+
+        for (ParticipantProblem pp : ppList) {
+            userMap.computeIfAbsent(pp.getUserId(), k -> new ArrayList<>()).add(pp);
+        }
 
         List<LeaderboardResponse> leaderboard = new ArrayList<>();
-        int rank = 1;
 
-        for (int i = 0; i < participants.size(); i++) {
+        // compute score per user
+        for (Long userId : userMap.keySet()) {
 
-            if (i > 0 && !participants.get(i).getScore().equals(participants.get(i - 1).getScore())) {
-                rank = i + 1;
+            int solved = 0;
+            int totalPenalty = 0;
+
+            for (ParticipantProblem pp : userMap.get(userId)) {
+                if (Boolean.TRUE.equals(pp.getSolved())) {
+                    solved++;
+                    totalPenalty += pp.getPenalty();
+                }
             }
 
             leaderboard.add(new LeaderboardResponse(
-                    participants.get(i).getUserId(),
-                    participants.get(i).getScore(),
-                    rank));
+                    userId,
+                    solved,
+                    totalPenalty,
+                    0 // rank will be assigned later
+            ));
+        }
+
+        // sort:
+        // 1. solved DESC
+        // 2. penalty ASC
+        leaderboard.sort((a, b) -> {
+            if (!b.getSolved().equals(a.getSolved())) {
+                return b.getSolved() - a.getSolved();
+            }
+            return a.getPenalty() - b.getPenalty();
+        });
+
+        // assign ranks
+        int rank = 1;
+
+        for (int i = 0; i < leaderboard.size(); i++) {
+
+            if (i > 0 &&
+                    (!leaderboard.get(i).getSolved().equals(leaderboard.get(i - 1).getSolved()) ||
+                            !leaderboard.get(i).getPenalty().equals(leaderboard.get(i - 1).getPenalty()))) {
+
+                rank = i + 1;
+            }
+
+            leaderboard.get(i).setRank(rank);
         }
 
         return leaderboard;
@@ -170,39 +212,69 @@ public class RoomService {
     }
 
     public String startContest(Long roomId, Long userId) {
-        Room room = roomRepository.findById(roomId).orElseThrow(() -> new RuntimeException("Room not found"));
 
-        // Only host can start
+        Room room = roomRepository.findById(roomId)
+                .orElseThrow(() -> new RuntimeException("Room not found"));
+
         if (!room.getHostUserId().equals(userId)) {
-            return "Only host can start the contest";
+            throw new RuntimeException("Only host can start the contest");
         }
 
-        // case1: check room status
-        if (!room.getStatus().equals("WAITING")) {
-            return "Room already started or finished";
+        if (!"WAITING".equals(room.getStatus())) {
+            throw new RuntimeException("Room already started or finished");
         }
 
-        // case2: to check partiicipant count
         List<Participant> participants = participantRepository.findByRoomId(roomId);
 
         if (participants.size() != 2) {
-            return "Need exactly 2 players to start";
+            throw new RuntimeException("Need exactly 2 players to start");
         }
 
-        // fetch problems ( Current Count : 3 )
+        // Fetch problems
         List<Problem> problems = problemRepository.findAll();
 
         if (problems.size() < 3) {
-            return "Not enough problems in DB";
+            throw new RuntimeException("Not enough problems in DB");
         }
 
+        // Assign first 3 problems to room
         for (int i = 0; i < 3; i++) {
             RoomProblem rp = new RoomProblem();
             rp.setRoomId(roomId);
             rp.setProblemId(problems.get(i).getId());
-
             roomProblemRepository.save(rp);
         }
+
+        // Fetch assigned problems 
+        List<RoomProblem> roomProblems = roomProblemRepository.findByRoomId(roomId);
+
+        // Initialize ParticipantProblem for each user + problem
+        for (Participant participant : participants) {
+
+            for (RoomProblem rp : roomProblems) {
+
+                boolean exists = participantProblemRepository
+                        .findByUserIdAndRoomIdAndProblemId(
+                                participant.getUserId(),
+                                roomId,
+                                rp.getProblemId())
+                        .isPresent();
+
+                if (!exists) {
+                    ParticipantProblem pp = new ParticipantProblem();
+                    pp.setUserId(participant.getUserId());
+                    pp.setRoomId(roomId);
+                    pp.setProblemId(rp.getProblemId());
+                    pp.setAttempts(0);
+                    pp.setPenalty(0);
+                    pp.setSolved(false);
+
+                    participantProblemRepository.save(pp);
+                }
+            }
+        }
+
+        room.setStartTime(System.currentTimeMillis());
 
         room.setStatus("ACTIVE");
         roomRepository.save(room);

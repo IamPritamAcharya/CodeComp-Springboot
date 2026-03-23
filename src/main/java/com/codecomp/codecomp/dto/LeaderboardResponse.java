@@ -8,6 +8,10 @@ import lombok.Data;
 public class LeaderboardResponse {
 
     private Long userId;
-    private Integer score;
+
+    private Integer solved;   // number of solved problems
+
+    private Integer penalty;  
+
     private Integer rank;
 }

@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.codecomp.codecomp.dto.SubmissionRequest;
-
 import com.codecomp.codecomp.room.RoomService;
 import com.codecomp.codecomp.submission.SubmissionService;
 

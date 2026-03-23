@@ -17,4 +17,8 @@ public class Room {
     private String password;
 
     private String status;
+
+    private Long startTime;
+    
+    private Long endTime;
 }
