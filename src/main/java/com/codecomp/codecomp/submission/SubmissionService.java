@@ -14,6 +14,7 @@ import com.codecomp.codecomp.dto.SubmissionRequest;
 import com.codecomp.codecomp.models.Room;
 import com.codecomp.codecomp.models.Submission;
 import com.codecomp.codecomp.queue.JudgePublisher;
+import com.codecomp.codecomp.rate.RateLimitService;
 import com.codecomp.codecomp.repository.ParticipantRepository;
 import com.codecomp.codecomp.repository.RoomProblemRepository;
 import com.codecomp.codecomp.repository.RoomRepository;
@@ -33,6 +34,7 @@ public class SubmissionService {
 
     private final ObjectMapper objectMapper;
     private final JudgePublisher judgePublisher;
+    private final RateLimitService rateLimitService;
 
     public Map<String, Object> submit(SubmissionRequest req) {
 
@@ -41,6 +43,8 @@ public class SubmissionService {
         Long problemId = req.getProblemId();
         String code = req.getCode();
         Integer languageId = req.getLanguageId();
+
+        rateLimitService.checkSubmissionLimit(userId);
 
         Room room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new RuntimeException("Room not found"));

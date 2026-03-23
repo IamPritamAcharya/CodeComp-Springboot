@@ -16,7 +16,7 @@ import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/rooms")
-@RequiredArgsConstructor // lombok creates constrcutor for final feidls
+@RequiredArgsConstructor
 public class RoomController {
 
     private final SubmissionService submissionService;
@@ -24,61 +24,34 @@ public class RoomController {
 
     @PostMapping("/create")
     public ResponseEntity<?> createRoom(@RequestParam Long userId) {
-        try {
-            return ResponseEntity.ok(roomService.createRoom(userId));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+        return ResponseEntity.ok(roomService.createRoom(userId));
     }
 
     @PostMapping("/join")
     public ResponseEntity<?> joinRoom(@RequestParam Long roomId,
             @RequestParam String password,
             @RequestParam Long userId) {
-        try {
-            return ResponseEntity.ok(roomService.joinRoom(roomId, password, userId));
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+        return ResponseEntity.ok(roomService.joinRoom(roomId, password, userId));
     }
 
     @PostMapping("/start")
     public ResponseEntity<?> startContest(@RequestParam Long roomId,
             @RequestParam Long userId) {
-        try {
-            return ResponseEntity.ok(roomService.startContest(roomId, userId));
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+        return ResponseEntity.ok(roomService.startContest(roomId, userId));
     }
 
     @PostMapping("/submit")
     public ResponseEntity<?> submitCode(@RequestBody SubmissionRequest req) {
-        try {
-            return ResponseEntity.ok(submissionService.submit(req));
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().body("Internal server error");
-        }
+        return ResponseEntity.ok(submissionService.submit(req));
     }
 
     @GetMapping("/leaderboard")
     public ResponseEntity<?> getLeaderboard(@RequestParam Long roomId) {
-        try {
-            return ResponseEntity.ok(roomService.getLeaderboard(roomId));
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
-
+        return ResponseEntity.ok(roomService.getLeaderboard(roomId));
     }
 
     @PostMapping("/end")
     public ResponseEntity<?> endContest(@RequestParam Long roomId) {
-        try {
-            return ResponseEntity.ok(roomService.endContest(roomId));
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+        return ResponseEntity.ok(roomService.endContest(roomId));
     }
 }
