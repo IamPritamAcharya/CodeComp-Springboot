@@ -26,7 +26,11 @@ public class RedisSubscriber implements MessageListener {
 
             RoomStateResponse state = objectMapper.readValue(json, RoomStateResponse.class);
 
-            Long roomId = state.getRoomId();
+            String channel = new String(message.getChannel());
+            System.out.println("Channel: " + channel);
+
+            String roomIdStr = channel.split(":")[1];
+            Long roomId = Long.parseLong(roomIdStr);
 
             messagingTemplate.convertAndSend(
                     "/topic/room/" + roomId,

@@ -26,7 +26,7 @@ public class RedisListenerConfig {
 
         container.addMessageListener(
                 subscriber,
-                new PatternTopic("room-updates"));
+                new PatternTopic("room:*"));
 
         return container;
     }

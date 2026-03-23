@@ -4,25 +4,17 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
-import tools.jackson.databind.ObjectMapper;
 
 @Service
 @RequiredArgsConstructor
 public class RedisPublisher {
 
     private final RedisTemplate<String, String> redisTemplate;
-    private final ObjectMapper objectMapper;
 
-    public void publish(String channel, Object message) {
-        try {
-            String json = objectMapper.writeValueAsString(message);
+    public void publish(String channel, String message) {
 
-            System.out.println("Publishing JSON: " + json);
+        System.out.println("Publishing JSON: " + message);
 
-            redisTemplate.convertAndSend(channel, json);
-
-        } catch (Exception e) {
-            throw new RuntimeException("Redis publish failed", e);
-        }
+        redisTemplate.convertAndSend(channel, message);
     }
 }

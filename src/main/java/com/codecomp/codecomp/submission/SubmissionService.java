@@ -151,18 +151,11 @@ public class SubmissionService {
 
         participantProblemRepository.save(pp);
 
-        SubmissionUpdate update = new SubmissionUpdate(
-                userId,
-                problemId,
-                statusDescription,
-                pp.getAttempts());
-
-        System.out.println("Sending WS update: " + update);
-        System.out.println("RoomId: " + roomId);
-
         RoomStateResponse state = roomService.getRoomState(roomId);
 
-        redisPublisher.publish("room-updates", state);
+        String json = objectMapper.writeValueAsString(state);
+
+        redisPublisher.publish("room:" + roomId, json);
 
         Map<String, Object> result = new HashMap<>();
         result.put("status", statusDescription);
