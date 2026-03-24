@@ -103,7 +103,7 @@ public class SubmissionService {
 
         // Submit
         ResponseEntity<String> response = restTemplate.postForEntity(
-                "http://localhost:2358/submissions?base64_encoded=false&wait=false",
+                "http://judge0:2358/submissions?base64_encoded=false&wait=false",
                 entity,
                 String.class);
 
@@ -117,7 +117,7 @@ public class SubmissionService {
             Thread.sleep(1000);
 
             Map<String, Object> result = restTemplate.getForObject(
-                    "http://localhost:2358/submissions/" + token + "?base64_encoded=false",
+                    "http://judge0:2358/submissions/" + token + "?base64_encoded=false",
                     Map.class);
 
             Map<String, Object> status = (Map<String, Object>) result.get("status");
