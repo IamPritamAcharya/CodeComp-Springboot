@@ -20,19 +20,26 @@ public class JwtUtil {
     public String generateToken(Long userId) {
         return Jwts.builder()
                 .setSubject(String.valueOf(userId))
+                .claim("role", "USER") 
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION))
                 .signWith(getKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
 
+    public Claims extractClaims(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(getKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+    }
+
     public Long extractUserId(String token) {
-        return Long.parseLong(
-                Jwts.parserBuilder()
-                        .setSigningKey(getKey())
-                        .build()
-                        .parseClaimsJws(token)
-                        .getBody()
-                        .getSubject());
+        return Long.parseLong(extractClaims(token).getSubject());
+    }
+
+    public String extractRole(String token) {
+        return extractClaims(token).get("role", String.class);
     }
 }
