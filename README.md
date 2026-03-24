@@ -1,7 +1,3 @@
-Here’s your README rewritten cleanly and professionally without adding any new content:
-
----
-
 # CodeComp 🚀
 
 A real-time competitive coding platform featuring 1v1 rooms, live leaderboard updates, automated judging, and secure authentication using JWT and Google OAuth2.

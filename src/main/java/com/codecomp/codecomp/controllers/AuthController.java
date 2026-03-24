@@ -1,5 +1,6 @@
 package com.codecomp.codecomp.controllers;
 
+import java.io.IOException;
 import java.util.Map;
 
 import org.springframework.security.core.Authentication;
@@ -14,6 +15,7 @@ import com.codecomp.codecomp.models.User;
 import com.codecomp.codecomp.repository.UserRepository;
 import com.codecomp.codecomp.security.JwtUtil;
 
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -34,7 +36,7 @@ public class AuthController {
     }
 
     @GetMapping("/oauth-success")
-    public Map<String, Object> oauthSuccess(Authentication authentication) {
+    public void oauthSuccess(Authentication authentication, HttpServletResponse response) throws IOException {
 
         if (authentication == null) {
             throw new RuntimeException("User not authenticated via OAuth2");
@@ -60,9 +62,11 @@ public class AuthController {
 
         String token = jwtUtil.generateToken(user.getId());
 
-        return Map.of(
-                "userId", user.getId(),
-                "email", user.getEmail(),
-                "token", token);
+        String redirectUrl = "http://localhost:3000/oauth-success" +
+                "?token=" + token +
+                "&userId=" + user.getId() +
+                "&email=" + user.getEmail();
+
+        response.sendRedirect(redirectUrl);
     }
 }
