@@ -11,11 +11,13 @@ import org.springframework.stereotype.Service;
 import com.codecomp.codecomp.dto.EndContestResponse;
 import com.codecomp.codecomp.dto.LeaderboardResponse;
 import com.codecomp.codecomp.dto.RoomStateResponse;
+import com.codecomp.codecomp.models.ContestHistory;
 import com.codecomp.codecomp.models.Participant;
 import com.codecomp.codecomp.models.ParticipantProblem;
 import com.codecomp.codecomp.models.Problem;
 import com.codecomp.codecomp.models.Room;
 import com.codecomp.codecomp.models.RoomProblem;
+import com.codecomp.codecomp.repository.ContestHistoryRepository;
 import com.codecomp.codecomp.repository.ParticipantProblemRepository;
 import com.codecomp.codecomp.repository.ParticipantRepository;
 import com.codecomp.codecomp.repository.ProblemRepository;
@@ -33,6 +35,7 @@ public class RoomService {
     private final ProblemRepository problemRepository;
     private final RoomProblemRepository roomProblemRepository;
     private final ParticipantProblemRepository participantProblemRepository;
+    private final ContestHistoryRepository contestHistoryRepository;
 
     public List<LeaderboardResponse> getLeaderboard(Long roomId) {
 
@@ -118,57 +121,95 @@ public class RoomService {
         return leaderboard;
     }
 
-    public EndContestResponse endContest(Long roomId) {
+    public EndContestResponse endContest(Long roomId, Long userId) {
 
         Room room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new RuntimeException("Room not found"));
+
+        if (!room.getHostUserId().equals(userId)) {
+            throw new RuntimeException("Only host can end the contest");
+        }
 
         if (!"ACTIVE".equalsIgnoreCase(room.getStatus())) {
             throw new RuntimeException("Contest not active");
         }
 
-        List<Participant> participants = participantRepository.findByRoomId(roomId);
-
-        if (participants.size() != 2) {
-            throw new RuntimeException("Invalid participant count");
-        }
-
-        Participant p1 = participants.get(0);
-        Participant p2 = participants.get(1);
+        // Use leaderboard instead of score
+        List<LeaderboardResponse> leaderboard = getLeaderboard(roomId);
 
         Long winnerUserId = null;
         String result;
 
-        if (p1.getScore() > p2.getScore()) {
-            winnerUserId = p1.getUserId();
-            result = "WIN";
-        } else if (p2.getScore() > p1.getScore()) {
-            winnerUserId = p2.getUserId();
-            result = "WIN";
-        } else {
+        if (leaderboard.isEmpty()) {
             result = "DRAW";
+        } else {
+
+            winnerUserId = leaderboard.get(0).getUserId();
+            result = "WIN";
+
+            // check for draw
+            if (leaderboard.size() > 1) {
+
+                LeaderboardResponse first = leaderboard.get(0);
+                LeaderboardResponse second = leaderboard.get(1);
+
+                if (first.getSolved().equals(second.getSolved()) &&
+                        first.getPenalty().equals(second.getPenalty())) {
+
+                    winnerUserId = null;
+                    result = "DRAW";
+                }
+            }
         }
 
+        // update room
         room.setStatus("FINISHED");
+        room.setEndTime(System.currentTimeMillis());
         roomRepository.save(room);
+
+        // save contest history
+        for (LeaderboardResponse entry : leaderboard) {
+
+            ContestHistory history = new ContestHistory();
+
+            history.setRoomId(roomId);
+            history.setUserId(entry.getUserId());
+            history.setSolved(entry.getSolved());
+            history.setPenalty(entry.getPenalty().intValue());
+            history.setTimestamp(System.currentTimeMillis());
+
+            if (winnerUserId == null) {
+                history.setResult("DRAW");
+            } else if (entry.getUserId().equals(winnerUserId)) {
+                history.setResult("WIN");
+            } else {
+                history.setResult("LOSS");
+            }
+
+            contestHistoryRepository.save(history);
+        }
 
         return new EndContestResponse(winnerUserId, result);
     }
 
-    public Room createRoom(Long userId) {
+    public Room createRoom(Long userId, String password) {
+
         Room room = new Room();
 
         room.setHostUserId(userId);
 
-        room.setPassword("1234");
+        // if host gives password -> use it
+        // else -> auto generate
+        if (password == null || password.isBlank()) {
+            password = generatePassword();
+        }
 
+        room.setPassword(password);
         room.setStatus("WAITING");
 
-        Room savedRoom = roomRepository.save(room); // db insert
+        Room savedRoom = roomRepository.save(room);
 
-        // now we add creator as participant
         Participant participant = new Participant();
-
         participant.setRoomId(savedRoom.getId());
         participant.setUserId(userId);
         participant.setScore(0);
@@ -176,6 +217,10 @@ public class RoomService {
         participantRepository.save(participant);
 
         return savedRoom;
+    }
+
+    private String generatePassword() {
+        return String.valueOf((int) (Math.random() * 9000) + 1000);
     }
 
     public String joinRoom(Long roomId, String password, Long userId) {
@@ -298,17 +343,104 @@ public class RoomService {
         return "Contest started";
     }
 
-   public RoomStateResponse getRoomState(Long roomId) {
+    public RoomStateResponse getRoomState(Long roomId) {
 
-    List<LeaderboardResponse> leaderboard = getLeaderboard(roomId);
+        List<LeaderboardResponse> leaderboard = getLeaderboard(roomId);
 
-    List<ParticipantProblem> problems =
-            participantProblemRepository.findByRoomId(roomId);
+        List<ParticipantProblem> all = participantProblemRepository.findByRoomId(roomId);
 
-    return new RoomStateResponse(
-            roomId,       
-            leaderboard,
-            problems
-    );
-}
+        // separate users
+        Map<Long, List<ParticipantProblem>> map = new HashMap<>();
+
+        for (ParticipantProblem pp : all) {
+            map.computeIfAbsent(pp.getUserId(), k -> new ArrayList<>()).add(pp);
+        }
+
+        // get 2 users
+        List<Long> users = new ArrayList<>(map.keySet());
+
+        List<ParticipantProblem> user1 = map.getOrDefault(users.get(0), new ArrayList<>());
+        List<ParticipantProblem> user2 = users.size() > 1
+                ? map.getOrDefault(users.get(1), new ArrayList<>())
+                : new ArrayList<>();
+
+        return new RoomStateResponse(
+                roomId,
+                leaderboard,
+                user1,
+                user2);
+    }
+
+    public Map<String, Object> getUserStats(Long userId) {
+
+        List<ContestHistory> history = contestHistoryRepository.findByUserId(userId);
+
+        int total = history.size();
+        int wins = 0;
+        int losses = 0;
+        int draws = 0;
+        int totalSolved = 0;
+
+        for (ContestHistory h : history) {
+
+            totalSolved += h.getSolved();
+
+            switch (h.getResult()) {
+                case "WIN" -> wins++;
+                case "LOSS" -> losses++;
+                case "DRAW" -> draws++;
+            }
+        }
+
+        double winRate = total == 0 ? 0 : (wins * 100.0) / total;
+
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("totalContests", total);
+        stats.put("wins", wins);
+        stats.put("losses", losses);
+        stats.put("draws", draws);
+        stats.put("totalSolved", totalSolved);
+        stats.put("winRate", winRate);
+
+        return stats;
+    }
+
+    public Map<String, Object> getUserProfile(Long userId) {
+
+        List<ContestHistory> history = contestHistoryRepository.findByUserIdOrderByTimestampDesc(userId);
+
+        int total = history.size();
+        int wins = 0, losses = 0, draws = 0;
+        int totalSolved = 0;
+
+        for (ContestHistory h : history) {
+
+            totalSolved += h.getSolved();
+
+            switch (h.getResult()) {
+                case "WIN" -> wins++;
+                case "LOSS" -> losses++;
+                case "DRAW" -> draws++;
+            }
+        }
+
+        double winRate = total == 0 ? 0 : (wins * 100.0) / total;
+
+        // last 5 contests
+        List<ContestHistory> recent = history.stream().limit(5).toList();
+
+        Map<String, Object> response = new HashMap<>();
+
+        response.put("stats", Map.of(
+                "totalContests", total,
+                "wins", wins,
+                "losses", losses,
+                "draws", draws,
+                "totalSolved", totalSolved,
+                "winRate", winRate));
+
+        response.put("recentMatches", recent);
+
+        return response;
+    }
 }

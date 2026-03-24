@@ -14,6 +14,8 @@ import lombok.NoArgsConstructor;
 public class RoomStateResponse {
     private Long roomId;
     private List<LeaderboardResponse> leaderboard;
-    private List<ParticipantProblem> problems;
+
+    private List<ParticipantProblem> myProblems;
+    private List<ParticipantProblem> opponentProblems;
 
 }

@@ -12,6 +12,7 @@ import com.codecomp.codecomp.dto.SubmissionRequest;
 import com.codecomp.codecomp.room.RoomService;
 import com.codecomp.codecomp.submission.SubmissionService;
 
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -23,25 +24,42 @@ public class RoomController {
     private final RoomService roomService;
 
     @PostMapping("/create")
-    public ResponseEntity<?> createRoom(@RequestParam Long userId) {
-        return ResponseEntity.ok(roomService.createRoom(userId));
+    public ResponseEntity<?> createRoom(
+            @RequestParam(required = false) String password,
+            HttpServletRequest request) {
+
+        Long userId = (Long) request.getAttribute("userId");
+
+        return ResponseEntity.ok(roomService.createRoom(userId, password));
     }
 
     @PostMapping("/join")
     public ResponseEntity<?> joinRoom(@RequestParam Long roomId,
             @RequestParam String password,
-            @RequestParam Long userId) {
+            HttpServletRequest request) {
+
+        Long userId = (Long) request.getAttribute("userId");
+
         return ResponseEntity.ok(roomService.joinRoom(roomId, password, userId));
     }
 
     @PostMapping("/start")
     public ResponseEntity<?> startContest(@RequestParam Long roomId,
-            @RequestParam Long userId) {
+            HttpServletRequest request) {
+
+        Long userId = (Long) request.getAttribute("userId");
+
         return ResponseEntity.ok(roomService.startContest(roomId, userId));
     }
 
     @PostMapping("/submit")
-    public ResponseEntity<?> submitCode(@RequestBody SubmissionRequest req) {
+    public ResponseEntity<?> submitCode(@RequestBody SubmissionRequest req,
+            HttpServletRequest request) {
+
+        Long userId = (Long) request.getAttribute("userId");
+
+        req.setUserId(userId);
+
         return ResponseEntity.ok(submissionService.submit(req));
     }
 
@@ -51,7 +69,27 @@ public class RoomController {
     }
 
     @PostMapping("/end")
-    public ResponseEntity<?> endContest(@RequestParam Long roomId) {
-        return ResponseEntity.ok(roomService.endContest(roomId));
+    public ResponseEntity<?> endContest(@RequestParam Long roomId,
+            HttpServletRequest request) {
+
+        Long userId = (Long) request.getAttribute("userId");
+
+        return ResponseEntity.ok(roomService.endContest(roomId, userId));
+    }
+
+    @GetMapping("/stats")
+    public ResponseEntity<?> getStats(HttpServletRequest request) {
+
+        Long userId = (Long) request.getAttribute("userId");
+
+        return ResponseEntity.ok(roomService.getUserStats(userId));
+    }
+
+    @GetMapping("/profile")
+    public ResponseEntity<?> getProfile(HttpServletRequest request) {
+
+        Long userId = (Long) request.getAttribute("userId");
+
+        return ResponseEntity.ok(roomService.getUserProfile(userId));
     }
 }

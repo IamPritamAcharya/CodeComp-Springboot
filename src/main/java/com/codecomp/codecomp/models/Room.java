@@ -19,7 +19,7 @@ public class Room {
     private String status;
 
     private Long startTime;
-    
+
     private Long endTime;
 
     private Long duration; // in milliseconds

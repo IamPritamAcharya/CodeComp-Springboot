@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 public class ContestScheduler {
 
     private final RoomRepository roomRepository;
+    private final RoomService roomService; 
 
     @Scheduled(fixedRate = 5000) // every 5 seconds
     public void checkAndEndContests() {
@@ -27,6 +28,7 @@ public class ContestScheduler {
         long now = System.currentTimeMillis();
 
         for (Room room : activeRooms) {
+
             if (room.getStartTime() == null || room.getDuration() == null) {
                 continue;
             }
@@ -34,15 +36,12 @@ public class ContestScheduler {
             long endTime = room.getStartTime() + room.getDuration();
 
             if (now >= endTime) {
-                room.setStatus("FINISHED");
-                room.setEndTime(now);
 
-                roomRepository.save(room);
+                // call actual business logic
+                roomService.endContest(room.getId(), room.getHostUserId());
 
                 System.out.println("Contest auto-ended for room: " + room.getId());
             }
         }
-
     }
-
 }

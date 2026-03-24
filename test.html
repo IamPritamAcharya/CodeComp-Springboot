@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/stompjs/lib/stomp.min.js"></script>
+</head>
+<body>
+
+<script>
+  var socket = new SockJS('http://localhost:8081/ws');
+  var stompClient = Stomp.over(socket);
+
+  stompClient.connect({}, function () {
+      console.log("Connected");
+
+      stompClient.subscribe('/topic/room/1', function (message) {
+          console.log("REALTIME UPDATE:", JSON.parse(message.body));
+      });
+  });
+</script>
+
+</body>
+</html>
