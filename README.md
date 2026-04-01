@@ -1,322 +1,285 @@
-# CodeComp 🚀
+# ⚙️ CodeComp – Real-Time Competitive Coding Backend System ⚙️
 
-A real-time competitive coding platform featuring 1v1 rooms, live leaderboard updates, automated judging, and secure authentication using JWT and Google OAuth2.
+![Java](https://img.shields.io/badge/Java-21-orange)
+![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.x-brightgreen)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-blue)
+![Redis](https://img.shields.io/badge/Redis-Cache-red)
+![RabbitMQ](https://img.shields.io/badge/RabbitMQ-Message_Broker-orange)
+![Judge0](https://img.shields.io/badge/Judge0-Code_Execution-lightgrey)
+![WebSockets](https://img.shields.io/badge/WebSockets-STOMP-blueviolet)
+![JWT](https://img.shields.io/badge/Auth-JWT-yellow)
+![OAuth2](https://img.shields.io/badge/Auth-Google_OAuth2-red)
+![Docker](https://img.shields.io/badge/Docker-Containerized-2496ED)
+
+![Architecture](https://img.shields.io/badge/Architecture-Event_Driven-purple)
+![Pattern](https://img.shields.io/badge/Pattern-Producer_Consumer-blue)
+![Communication](https://img.shields.io/badge/Communication-Pub_Sub-green)
+![Realtime](https://img.shields.io/badge/Realtime-WebSockets-orange)
+![Scalability](https://img.shields.io/badge/Scalability-Async_Processing-blueviolet)
+![Consistency](https://img.shields.io/badge/Consistency-Eventual-yellowgreen)
+
+![Status](https://img.shields.io/badge/Status-Production_Ready-success)
+![Design](https://img.shields.io/badge/Focus-System_Design-critical)
 
 ---
 
-## 1. Overview
-
-CodeComp enables users to:
-
-* Create and join coding rooms
-* Compete in real-time contests
-* Submit code using Judge0
-* View live leaderboard updates via WebSockets
-* Track contest history and performance statistics
+A distributed, event-driven backend system for real-time 1v1 competitive coding, featuring room-based contests, asynchronous code execution, and live leaderboard updates.
 
 ---
 
-## 2. System Architecture
+## Overview
 
-### High-Level Architecture
+CodeComp is an event-driven backend system with distributed components, designed to manage real-time competitive programming contests at scale.
 
+It handles authentication, room lifecycle management, asynchronous submission processing, real-time leaderboard updates, and contest history persistence.
+
+The system leverages message queues and pub/sub mechanisms to decouple execution from request handling, ensuring low-latency APIs and scalable submission processing.
+
+---
+
+## Architecture
+
+### High-Level Flow
+
+Client → Spring Boot Backend → Distributed Components (PostgreSQL, Redis, RabbitMQ, Judge0)
+
+### Detailed System Architecture
+
+```text
+                     +----------------------+
+                     |      Client App      |
+                     +----------+-----------+
+                                |
+                                | HTTPS / WebSocket
+                                v
++--------------------------------------------------------------------+
+|                    Spring Boot Backend                             |
+|                                                                    |
+|  +-------------------+    +-------------------+    +-----------+   |
+|  | AuthController    |    | RoomController    |    | Security  |   |
+|  | OAuth2 + JWT      |    | Rooms / Submit    |    | JWTFilter |   |
+|  +---------+---------+    +---------+---------+    +-----+-----+   |
+|            |                        |                      |       |
+|            v                        v                      v       |
+|     +-------------+        +------------------+     +---------+    |
+|     | User Repo   |        | RoomService      |     | JwtUtil |    |
+|     +-------------+        | ContestScheduler |     +---------+    |    
+|                            +---------+--------+                    |
+|                                      |                             |
+|                                      v                             |
+|                           +-------------------------+              |
+|                           | SubmissionService       |              |
+|                           | RateLimitService        |              |
+|                           +-----------+-------------+              |
+|                                       |                            |
+|                  +--------------------+--------------------+       |
+|                  |                                         |       |
+|                  v                                         v       |
+|         +--------------+                         +---------------+ |
+|         | RabbitMQ     |                         | PostgreSQL    | |
+|         | judge-queue  |                         | users, rooms  | |
+|         | judge-dlq    |                         | submissions   | |
+|         +------+-------+                         | problems      | |
+|                |                                 | test_cases    | |
+|                v                                 | history       | |
+|           +---------------+                      +---------------+ |
+|           | JudgeConsumer |                               ^        |
+|           | calls         |                               |        |
+|           | SubmissionSvc |                               |        |
+|           +------+--------+                               |        |
+|                  |                                        |        |
+|                  v                                        |        |
+|           +--------------+                                |        |
+|           | Judge0 API   |--------------------------------+        |
+|           +--------------+                                         |
+|                  |                                                 |
+|                  v                                                 |
+|           +----------------+                                       |
+|           | RedisPublisher |                                       |
+|           | room:{roomId}  |                                       |
+|           +------+---------+                                       |
+|                  |                                                 |
+|                  v                                                 |
+|           +------------------------------+                         |
+|           | RedisSubscriber              |                         |
+|           | STOMP topic                  |                         |
+|           | /topic/room/{roomId}         |                         |
+|           +------------------------------+                         |
++--------------------------------------------------------------------+
 ```
-+-------------------+
-|   Frontend (TBD)  |
-+--------+----------+
-         |
-         v
-+-------------------+
-| Spring Boot API   |
-| (Backend Core)    |
-+--------+----------+
-         |
-----------------------------------------------
-|            |             |                 |
-v            v             v                 v
-+--------+   +--------+   +-----------+   +-------------+
-| Redis  |   |RabbitMQ|   | Postgres  |   |  Judge0 API |
-| Cache  |   | Queue  |   | Database  |   | Code Runner |
-+--------+   +--------+   +-----------+   +-------------+
-```
+
+### Component Breakdown
+
+| Component       | Responsibility                                                |
+| --------------- | ------------------------------------------------------------- |
+| Spring Boot API | Core backend logic, authentication, room & contest management |
+| PostgreSQL      | Source of truth for users, rooms, submissions, and history    |
+| RabbitMQ        | Queue for asynchronous submission processing                  |
+| Judge0          | Secure code execution engine                                  |
+| Redis           | Pub/Sub for real-time event propagation                       |
+| WebSockets      | Push live leaderboard & contest updates to clients            |
 
 ---
 
-## 3. Tech Stack
+## Tech Stack
 
-| Component        | Technology          |
-| ---------------- | ------------------- |
-| Backend          | Spring Boot         |
-| Database         | PostgreSQL          |
-| Cache            | Redis               |
-| Queue            | RabbitMQ            |
-| Code Execution   | Judge0              |
-| Authentication   | JWT + Google OAuth2 |
-| Realtime         | WebSockets (STOMP)  |
-| Containerization | Docker              |
-
----
-
-## 4. Key System Design Decisions
-
-### 4.1 Real-time Updates
-
-* Uses WebSockets (STOMP over SockJS)
-* Topic-based room updates:
-
-  ```
-  /topic/room/{roomId}
-  ```
+| Layer          | Technology          |
+| -------------- | ------------------- |
+| Backend        | Spring Boot         |
+| Database       | PostgreSQL          |
+| Cache / PubSub | Redis               |
+| Queue          | RabbitMQ            |
+| Code Execution | Judge0              |
+| Realtime       | WebSockets (STOMP)  |
+| Authentication | JWT + Google OAuth2 |
+| Infrastructure | Docker              |
 
 ---
 
-### 4.2 Asynchronous Code Execution
+## System Design
 
-* Submissions are sent to RabbitMQ
-* Worker processes handle execution via Judge0
-* Prevents blocking API threads
+### Event-Driven Architecture
 
----
+The system follows an event-driven model where submission processing is decoupled from request handling using RabbitMQ. This ensures that API threads remain non-blocking while handling long-running code execution tasks.
 
-### 4.3 Caching & Rate Limiting
+### Real-time Updates
 
-* Redis is used for:
+Room state changes are propagated using Redis Pub/Sub and delivered to clients via WebSockets, enabling low-latency updates without polling.
 
-  * Rate limiting
-  * Fast lookup operations
+### Asynchronous Processing
 
----
+Submissions are queued and processed by background consumers, improving scalability and preventing API bottlenecks under high load.
 
-### 4.4 Authentication Strategy
+### Authentication Strategy
 
-#### Dual Authentication System:
+Google OAuth2 is used for identity verification, and JWT is issued for stateless authentication across all API requests.
 
-1. JWT (Primary)
-2. Google OAuth2 (Login Provider)
+### Consistency Model
 
-Flow:
+* PostgreSQL acts as the source of truth
+* Redis is used for event propagation, not persistence
+* Clients receive eventually consistent updates via WebSockets
 
-```
-Google Login → Backend → Generate JWT → Use JWT everywhere
-```
-
----
-
-### 4.5 Contest Model
+### Contest Model
 
 * Room-based contests
-* 2 participants per room
-* Scoring based on:
-
-  * Problems solved
-  * Penalty (time + attempts)
+* Two participants per room
+* Scoring based on solved problems and penalty (time + attempts)
 
 ---
 
-## 5. User Flows
+## Core Flows
 
-### 5.1 Login Flow
+### Login Flow
 
-```
-User → /oauth2/authorization/google → Google Login → Backend Callback → JWT Generated → Returned to user
-```
+User → Google OAuth → Backend → JWT issued → Client stores token
 
----
+### Room Creation
 
-### 5.2 Room Creation Flow
+User → Create Room → Room stored with host + password
 
-```
-User → POST /rooms/create → Room created with:
-- roomId
-- password
-- hostUserId
-```
+### Join Room
 
----
+User → Join with roomId + password → Added as participant
 
-### 5.3 Join Room Flow
+### Submission Flow
 
-```
-User → POST /rooms/join → Validate roomId + password → Add participant
-```
+User → Submit code → Stored (PENDING) → Sent to RabbitMQ →
+Consumer → SubmissionService → Judge0 → Result evaluated → DB updated →
+Redis publish → WebSocket push
+
+### Contest End
+
+* Manual: Host triggers end
+* Automatic: Scheduler checks and ends contest
 
 ---
 
-### 5.4 Contest Flow
+## Database Model
 
-```
-Start Contest
-↓
-Solve Problems
-↓
-Submit Code
-↓
-Judge0 Execution
-↓
-Update Leaderboard (WebSocket)
-```
-
----
-
-### 5.5 Contest End
-
-#### Manual:
-
-```
-Host → /rooms/end
-```
-
-#### Automatic:
-
-```
-Scheduler → checks every 5s → ends contest
-```
+| Table                | Description                 |
+| -------------------- | --------------------------- |
+| users                | User data                   |
+| rooms                | Contest rooms               |
+| participants         | Users in rooms              |
+| problems             | Problem definitions         |
+| room_problems        | Problems assigned to rooms  |
+| participant_problems | User-specific problem state |
+| submissions          | Code submissions            |
+| test_cases           | Input/output test cases     |
+| contest_history      | Past contest results        |
 
 ---
 
-## 6. API Endpoints
+## API Endpoints
 
-### Auth
+### Authentication
 
-#### Google OAuth2 Login
-
-```
-GET /oauth2/authorization/google
-```
-
-Response:
-
-```json
-{
-  "userId": 1,
-  "email": "user@gmail.com",
-  "token": "JWT_TOKEN"
-}
-```
+| Method | Endpoint                     |
+| ------ | ---------------------------- |
+| GET    | /oauth2/authorization/google |
+| POST   | /auth/login                  |
+| GET    | /auth/oauth-success          |
 
 ---
 
 ### Rooms
 
-#### Create Room
-
-```
-POST /rooms/create
-Authorization: Bearer <token>
-```
-
-#### Join Room
-
-```
-POST /rooms/join
-Authorization: Bearer <token>
-```
-
-#### Start Contest
-
-```
-POST /rooms/start
-```
-
-#### End Contest
-
-```
-POST /rooms/end
-```
+| Method | Endpoint       |
+| ------ | -------------- |
+| POST   | /rooms/create  |
+| POST   | /rooms/join    |
+| POST   | /rooms/start   |
+| POST   | /rooms/submit  |
+| POST   | /rooms/end     |
+| GET    | /rooms/stats   |
+| GET    | /rooms/profile |
 
 ---
 
-### Submissions
+### Leaderboard & History
 
-#### Submit Code
-
-```
-POST /submissions
-```
-
----
-
-### Leaderboard
-
-#### Get Leaderboard
-
-```
-GET /rooms/{roomId}/leaderboard
-```
+| Method | Endpoint                    |
+| ------ | --------------------------- |
+| GET    | /rooms/{roomId}/leaderboard |
+| GET    | /users/{userId}/history     |
 
 ---
 
-### Contest History
+## Realtime Communication
 
-```
-GET /users/{userId}/history
-```
-
----
-
-## 7. WebSocket Usage
-
-### Connect
-
-```
-ws://localhost:8081/ws
-```
+| Type      | Endpoint             |
+| --------- | -------------------- |
+| WebSocket | /ws                  |
+| Topic     | /topic/room/{roomId} |
+| Redis Pub | room:{roomId}        |
 
 ---
 
-### Subscribe
-
-```
-/topic/room/{roomId}
-```
-
----
-
-### Example Payload
-
-```json
-{
-  "roomId": 1,
-  "leaderboard": [...],
-  "myProblems": [...],
-  "opponentProblems": [...]
-}
-```
-
----
-
-## 8. Running the Project (Docker)
+## Running the Project
 
 ### Prerequisites
 
 * Docker
 * Docker Compose
-* Java 21 (for build)
+* Java 21
+
+### Steps
+
+1. Build the project
+   mvn clean package -DskipTests
+
+2. Start services
+   docker compose up --build
 
 ---
 
-### Step 1: Build JAR
-
-```
-mvn clean package -DskipTests
-```
-
----
-
-### Step 2: Run Services
-
-```
-docker compose up --build
-```
-
----
-
-### Services Started
+### Services
 
 | Service     | Port  |
 | ----------- | ----- |
 | Backend     | 8081  |
-| Postgres    | 5432  |
+| PostgreSQL  | 5432  |
 | Redis       | 6379  |
 | RabbitMQ    | 5672  |
 | RabbitMQ UI | 15672 |
@@ -324,45 +287,25 @@ docker compose up --build
 
 ---
 
-## 9. Database Access
+## Environment Configuration
 
-Use pgAdmin:
+Example configuration:
 
-* Host: localhost
-* Port: 5432
-* User: postgres
-* Password: postgres
-* DB: codecomp
-
----
-
-## 10. Environment Configuration
-
-Example:
-
-```
 spring.datasource.url=jdbc:postgresql://postgres:5432/codecomp
 spring.datasource.username=postgres
 spring.datasource.password=postgres
 
 spring.data.redis.host=redis
-
 spring.rabbitmq.host=rabbitmq
-```
 
 ---
 
-## 11. Deployment Notes
+## Deployment
 
-* Full system requires multi-container deployment
-
-Can be deployed using:
-
-* Fly.io (paid)
-* Hybrid (Render + Neon + Upstash)
+The system is designed for containerized deployment and can be hosted using platforms that support multi-service orchestration.
 
 ---
 
-## 13. Author
+## Author
 
 Pritam Acharya
