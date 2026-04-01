@@ -170,23 +170,40 @@ Google OAuth2 is used for identity verification, and JWT is issued for stateless
 
 ## Core Flows
 
+
+
 ### Login Flow
 
+```text
 User → Google OAuth → Backend → JWT issued → Client stores token
+```
+
+---
 
 ### Room Creation
 
+```text
 User → Create Room → Room stored with host + password
+```
+
+---
 
 ### Join Room
 
+```text
 User → Join with roomId + password → Added as participant
+```
+
+---
 
 ### Submission Flow
 
+```text
 User → Submit code → Stored (PENDING) → Sent to RabbitMQ →
 Consumer → SubmissionService → Judge0 → Result evaluated → DB updated →
 Redis publish → WebSocket push
+```
+
 
 ### Contest End
 
@@ -217,9 +234,9 @@ Redis publish → WebSocket push
 
 | Method | Endpoint                     |
 | ------ | ---------------------------- |
-| GET    | /oauth2/authorization/google |
-| POST   | /auth/login                  |
-| GET    | /auth/oauth-success          |
+| `GET`    | /oauth2/authorization/google |
+| `POST`   | /auth/login                  |
+| `GET`    | /auth/oauth-success          |
 
 ---
 
@@ -227,13 +244,13 @@ Redis publish → WebSocket push
 
 | Method | Endpoint       |
 | ------ | -------------- |
-| POST   | /rooms/create  |
-| POST   | /rooms/join    |
-| POST   | /rooms/start   |
-| POST   | /rooms/submit  |
-| POST   | /rooms/end     |
-| GET    | /rooms/stats   |
-| GET    | /rooms/profile |
+| `POST`  | /rooms/create  |
+| `POST`   | /rooms/join    |
+| `POST`   | /rooms/start   |
+| `POST`   | /rooms/submit  |
+| `POST`   | /rooms/end     |
+| `GET`    | /rooms/stats   |
+| `GET`    | /rooms/profile |
 
 ---
 
@@ -241,8 +258,8 @@ Redis publish → WebSocket push
 
 | Method | Endpoint                    |
 | ------ | --------------------------- |
-| GET    | /rooms/{roomId}/leaderboard |
-| GET    | /users/{userId}/history     |
+| `GET`    | /rooms/{roomId}/leaderboard |
+| `GET`    | /users/{userId}/history     |
 
 ---
 
@@ -250,9 +267,9 @@ Redis publish → WebSocket push
 
 | Type      | Endpoint             |
 | --------- | -------------------- |
-| WebSocket | /ws                  |
-| Topic     | /topic/room/{roomId} |
-| Redis Pub | room:{roomId}        |
+| `WebSocket` | /ws                  |
+| `Topic`     | /topic/room/{roomId} |
+| `Redis Pub` | room:{roomId}        |
 
 ---
 
@@ -266,11 +283,20 @@ Redis publish → WebSocket push
 
 ### Steps
 
-1. Build the project
-   mvn clean package -DskipTests
 
-2. Start services
-   docker compose up --build
+### 1. Build the project
+
+```text
+mvn clean package -DskipTests
+```
+
+
+### 2. Start services
+
+```text
+docker compose up --build
+```
+
 
 ---
 
