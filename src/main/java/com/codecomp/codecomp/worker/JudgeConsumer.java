@@ -40,7 +40,6 @@ public class JudgeConsumer {
         Submission submission = submissionRepository.findById(submissionId)
                 .orElseThrow();
 
-        // Idempotency check
         if (!"PENDING".equals(submission.getStatus())) {
             System.out.println("Skipping already processed: " + submissionId);
             return;
@@ -60,9 +59,14 @@ public class JudgeConsumer {
 
             String output = submissionService.runTestCase(code, tc.getInput(), languageId);
 
-            if (output == null ||
-                    !output.trim().equals(tc.getExpectedOutput().trim())) {
+            String expected = tc.getExpectedOutput() == null
+                    ? ""
+                    : tc.getExpectedOutput().trim();
 
+            System.out.println("Expected: " + expected);
+            System.out.println("Actual: " + output);
+
+            if (output == null || !output.equals(expected)) {
                 allPassed = false;
                 break;
             }
@@ -80,13 +84,16 @@ public class JudgeConsumer {
                     newPP.setUserId(userId);
                     newPP.setRoomId(roomId);
                     newPP.setProblemId(problemId);
+                    newPP.setAttempts(0);
+                    newPP.setPenalty(0);
+                    newPP.setSolved(false);
                     return newPP;
                 });
 
-        pp.setAttempts(pp.getAttempts() + 1);
+        pp.setAttempts((pp.getAttempts() == null ? 0 : pp.getAttempts()) + 1);
 
         if (!"Accepted".equalsIgnoreCase(status)) {
-            pp.setPenalty(pp.getPenalty() + 1);
+            pp.setPenalty((pp.getPenalty() == null ? 0 : pp.getPenalty()) + 1);
         } else {
             if (!Boolean.TRUE.equals(pp.getSolved())) {
                 pp.setSolved(true);

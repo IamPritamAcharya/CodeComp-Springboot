@@ -1,5 +1,7 @@
 package com.codecomp.codecomp.rate;
 
+import java.time.LocalDateTime;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -21,10 +23,11 @@ public class RateLimitService {
 
     public void checkSubmissionLimit(Long userId) {
 
-        long now = System.currentTimeMillis();
+        LocalDateTime windowStart = LocalDateTime.now()
+                .minusSeconds(windowMs / 1000);
 
         long count = submissionRepository
-                .countByUserIdAndCreatedAtAfter(userId, now - windowMs);
+                .countByUserIdAndCreatedAtAfter(userId, windowStart);
 
         if (count >= maxRequests) {
             throw new RuntimeException("Too many submissions. Please slow down.");

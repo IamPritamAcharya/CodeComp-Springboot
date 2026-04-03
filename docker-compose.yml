@@ -8,7 +8,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -39,10 +39,33 @@ services:
     depends_on:
       - postgres
       - redis
+    privileged: true
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+
+  judge0-worker:
+    image: judge0/judge0:latest
+    container_name: codecomp-judge0-worker
+    command: bash -c "QUEUE=* bundle exec rake resque:work"
+    depends_on:
+      - judge0
+      - redis
+      - postgres
+    environment:
+      REDIS_HOST: redis
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: codecomp
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    privileged: true 
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
 
   backend:
     build: .
     container_name: codecomp-backend
+    env_file:
+      - .env
     depends_on:
       - postgres
       - redis

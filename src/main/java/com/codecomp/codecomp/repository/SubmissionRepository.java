@@ -1,9 +1,11 @@
 package com.codecomp.codecomp.repository;
 
+import java.time.LocalDateTime;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.codecomp.codecomp.models.Submission;
 
 public interface SubmissionRepository extends JpaRepository<Submission, Long> {
-    long countByUserIdAndCreatedAtAfter(Long userId, Long timestamp);
+    long countByUserIdAndCreatedAtAfter(Long userId, LocalDateTime timestamp);
 }

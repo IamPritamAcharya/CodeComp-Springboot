@@ -1,5 +1,6 @@
 package com.codecomp.codecomp.submission;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -75,7 +76,7 @@ public class SubmissionService {
         submission.setCode(code);
         submission.setStatus("PENDING");
         submission.setLanguageId(languageId);
-        submission.setCreatedAt(System.currentTimeMillis());
+        submission.setCreatedAt(LocalDateTime.now());
 
         submissionRepository.save(submission);
 
@@ -101,7 +102,6 @@ public class SubmissionService {
 
         HttpEntity<String> entity = new HttpEntity<>(jsonBody, headers);
 
-        // Submit
         ResponseEntity<String> response = restTemplate.postForEntity(
                 "http://judge0:2358/submissions?base64_encoded=false&wait=false",
                 entity,
@@ -111,8 +111,10 @@ public class SubmissionService {
 
         String token = (String) responseMap.get("token");
 
-        // Poll with retry
-        for (int i = 0; i < 5; i++) {
+        int maxAttempts = 30;
+        int attempts = 0;
+
+        while (attempts++ < maxAttempts) {
 
             Thread.sleep(1000);
 
@@ -121,21 +123,27 @@ public class SubmissionService {
                     Map.class);
 
             Map<String, Object> status = (Map<String, Object>) result.get("status");
-
             String statusDesc = (String) status.get("description");
 
-            if ("In Queue".equals(statusDesc) || "Processing".equals(statusDesc)) {
+            System.out.println("Judge0 Status: " + statusDesc);
+
+            if ("In Queue".equalsIgnoreCase(statusDesc) ||
+                    "Processing".equalsIgnoreCase(statusDesc)) {
                 continue;
             }
 
-            // error cases
             if (!"Accepted".equalsIgnoreCase(statusDesc)) {
+                System.out.println("Execution failed: " + statusDesc);
                 return null;
             }
 
-            return (String) result.get("stdout");
-        }
+            Object stdoutObj = result.get("stdout");
 
+            System.out.println("STDOUT: " + stdoutObj);
+
+            return stdoutObj == null ? null : ((String) stdoutObj).trim();
+        }
+        
         return null;
     }
 }

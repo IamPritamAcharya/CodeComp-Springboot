@@ -1,10 +1,12 @@
 package com.codecomp.codecomp.models;
 
+import java.time.LocalDateTime;
+
 import jakarta.persistence.*;
 import lombok.Data;
 
 @Entity
-@Table(name = "submissions")
+@Table(name = "app_submissions")
 @Data
 public class Submission {
 
@@ -25,6 +27,6 @@ public class Submission {
 
     private Integer languageId;
 
-    private Long createdAt;
+    private LocalDateTime createdAt;
 
 }
