@@ -103,7 +103,7 @@ public class JudgeConsumer {
 
         participantProblemRepository.save(pp);
 
-        RoomStateResponse state = roomService.getRoomState(roomId);
+        RoomStateResponse state = roomService.getRoomStateInternal(roomId);
         String json = objectMapper.writeValueAsString(state);
 
         redisPublisher.publish("room:" + roomId, json);

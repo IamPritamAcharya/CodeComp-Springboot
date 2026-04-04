@@ -92,4 +92,20 @@ public class RoomController {
 
         return ResponseEntity.ok(roomService.getUserProfile(userId));
     }
+
+    @GetMapping("/state")
+    public ResponseEntity<?> getRoomState(
+            @RequestParam Long roomId,
+            HttpServletRequest request) {
+
+        Long userId = (Long) request.getAttribute("userId");
+
+        return ResponseEntity.ok(
+                roomService.getRoomState(roomId, userId));
+    }
+
+    @GetMapping("/problems")
+    public ResponseEntity<?> getRoomProblems(@RequestParam Long roomId) {
+        return ResponseEntity.ok(roomService.getRoomProblems(roomId));
+    }
 }

@@ -84,6 +84,7 @@ public class SubmissionService {
 
         Map<String, Object> result = new HashMap<>();
         result.put("status", "PENDING");
+        result.put("submissionId", submission.getId());
 
         return result;
     }
@@ -143,7 +144,7 @@ public class SubmissionService {
 
             return stdoutObj == null ? null : ((String) stdoutObj).trim();
         }
-        
+
         return null;
     }
 }

@@ -3,6 +3,7 @@ package com.codecomp.codecomp.controllers;
 import java.io.IOException;
 import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,6 +26,9 @@ public class AuthController {
 
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
+
+    @Value("${frontend.url}")
+    private String frontendUrl;
 
     @PostMapping("/login")
     public Map<String, Object> login(@RequestParam Long userId) {
@@ -62,7 +66,7 @@ public class AuthController {
 
         String token = jwtUtil.generateToken(user.getId());
 
-        String redirectUrl = "http://localhost:3000/oauth-success" +
+        String redirectUrl = frontendUrl + "/oauth-success" +
                 "?token=" + token +
                 "&userId=" + user.getId() +
                 "&email=" + user.getEmail();

@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import com.codecomp.codecomp.dto.EndContestResponse;
 import com.codecomp.codecomp.dto.LeaderboardResponse;
+import com.codecomp.codecomp.dto.ProblemResponse;
 import com.codecomp.codecomp.dto.RoomStateResponse;
 import com.codecomp.codecomp.models.ContestHistory;
 import com.codecomp.codecomp.models.Participant;
@@ -343,32 +344,57 @@ public class RoomService {
         return "Contest started";
     }
 
-    public RoomStateResponse getRoomState(Long roomId) {
+    public RoomStateResponse getRoomState(Long roomId, Long userId) {
 
-        List<LeaderboardResponse> leaderboard = getLeaderboard(roomId);
+        Room room = roomRepository.findById(roomId)
+                .orElseThrow(() -> new RuntimeException("Room not found"));
 
         List<ParticipantProblem> all = participantProblemRepository.findByRoomId(roomId);
 
-        // separate users
+        if (all.isEmpty()) {
+            return new RoomStateResponse(
+                    roomId,
+                    room.getStatus(),
+                    room.getStartTime(),
+                    room.getDuration(),
+                    userId,
+                    null,
+                    List.of(),
+                    List.of(),
+                    List.of());
+        }
+
+        // group by user
         Map<Long, List<ParticipantProblem>> map = new HashMap<>();
 
         for (ParticipantProblem pp : all) {
             map.computeIfAbsent(pp.getUserId(), k -> new ArrayList<>()).add(pp);
         }
 
-        // get 2 users
         List<Long> users = new ArrayList<>(map.keySet());
 
-        List<ParticipantProblem> user1 = map.getOrDefault(users.get(0), new ArrayList<>());
-        List<ParticipantProblem> user2 = users.size() > 1
-                ? map.getOrDefault(users.get(1), new ArrayList<>())
+        Long opponentId = users.stream()
+                .filter(id -> !id.equals(userId))
+                .findFirst()
+                .orElse(null);
+
+        List<ParticipantProblem> myProblems = map.getOrDefault(userId, new ArrayList<>());
+        List<ParticipantProblem> opponentProblems = opponentId != null
+                ? map.getOrDefault(opponentId, new ArrayList<>())
                 : new ArrayList<>();
+
+        List<LeaderboardResponse> leaderboard = getLeaderboard(roomId);
 
         return new RoomStateResponse(
                 roomId,
+                room.getStatus(),
+                room.getStartTime(),
+                room.getDuration(),
+                userId,
+                opponentId,
                 leaderboard,
-                user1,
-                user2);
+                myProblems,
+                opponentProblems);
     }
 
     public Map<String, Object> getUserStats(Long userId) {
@@ -442,5 +468,65 @@ public class RoomService {
         response.put("recentMatches", recent);
 
         return response;
+    }
+
+    public List<ProblemResponse> getRoomProblems(Long roomId) {
+
+        List<RoomProblem> roomProblems = roomProblemRepository.findByRoomId(roomId);
+
+        List<ProblemResponse> result = new ArrayList<>();
+
+        for (RoomProblem rp : roomProblems) {
+            Problem p = problemRepository.findById(rp.getProblemId())
+                    .orElseThrow();
+
+            result.add(new ProblemResponse(
+                    p.getId(),
+                    p.getTitle(),
+                    p.getDescription(),
+                    p.getDifficulty()));
+        }
+
+        return result;
+    }
+
+    public RoomStateResponse getRoomStateInternal(Long roomId) {
+
+        Room room = roomRepository.findById(roomId)
+                .orElseThrow(() -> new RuntimeException("Room not found"));
+
+        List<ParticipantProblem> all = participantProblemRepository.findByRoomId(roomId);
+
+        Map<Long, List<ParticipantProblem>> map = new HashMap<>();
+
+        for (ParticipantProblem pp : all) {
+            map.computeIfAbsent(pp.getUserId(), k -> new ArrayList<>()).add(pp);
+        }
+
+        List<Long> users = new ArrayList<>(map.keySet());
+
+        Long user1 = users.size() > 0 ? users.get(0) : null;
+        Long user2 = users.size() > 1 ? users.get(1) : null;
+
+        List<ParticipantProblem> user1Problems = user1 != null
+                ? map.getOrDefault(user1, new ArrayList<>())
+                : new ArrayList<>();
+
+        List<ParticipantProblem> user2Problems = user2 != null
+                ? map.getOrDefault(user2, new ArrayList<>())
+                : new ArrayList<>();
+
+        List<LeaderboardResponse> leaderboard = getLeaderboard(roomId);
+
+        return new RoomStateResponse(
+                roomId,
+                room.getStatus(),
+                room.getStartTime(),
+                room.getDuration(),
+                null, // currentUserId not needed for WS
+                null, // opponentUserId not needed for WS
+                leaderboard,
+                user1Problems,
+                user2Problems);
     }
 }
