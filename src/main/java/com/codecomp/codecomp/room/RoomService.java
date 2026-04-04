@@ -349,6 +349,19 @@ public class RoomService {
         Room room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new RuntimeException("Room not found"));
 
+        // IMPORTANT: use the Participant table (not ParticipantProblem) to determine
+        // opponentUserId. Participant rows are created when players join (WAITING phase).
+        // ParticipantProblem rows are only created when startContest() is called, so
+        // relying on them here meant opponentUserId was always null before the contest
+        // started, permanently disabling the "Start Contest" button on the frontend.
+        List<Participant> participants = participantRepository.findByRoomId(roomId);
+
+        Long opponentId = participants.stream()
+                .map(Participant::getUserId)
+                .filter(id -> !id.equals(userId))
+                .findFirst()
+                .orElse(null);
+
         List<ParticipantProblem> all = participantProblemRepository.findByRoomId(roomId);
 
         if (all.isEmpty()) {
@@ -358,7 +371,7 @@ public class RoomService {
                     room.getStartTime(),
                     room.getDuration(),
                     userId,
-                    null,
+                    opponentId, // correctly non-null even in WAITING phase
                     List.of(),
                     List.of(),
                     List.of());
@@ -370,13 +383,6 @@ public class RoomService {
         for (ParticipantProblem pp : all) {
             map.computeIfAbsent(pp.getUserId(), k -> new ArrayList<>()).add(pp);
         }
-
-        List<Long> users = new ArrayList<>(map.keySet());
-
-        Long opponentId = users.stream()
-                .filter(id -> !id.equals(userId))
-                .findFirst()
-                .orElse(null);
 
         List<ParticipantProblem> myProblems = map.getOrDefault(userId, new ArrayList<>());
         List<ParticipantProblem> opponentProblems = opponentId != null

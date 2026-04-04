@@ -24,6 +24,11 @@ services:
     ports:
       - "5672:5672"
       - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_running"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   judge0:
     image: judge0/judge0:latest
@@ -67,10 +72,14 @@ services:
     env_file:
       - .env
     depends_on:
-      - postgres
-      - redis
-      - rabbitmq
-      - judge0
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_started
+      redis:
+        condition: service_started
+      judge0:
+        condition: service_started
     ports:
       - "8081:8081"
     environment:

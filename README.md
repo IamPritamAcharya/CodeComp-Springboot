@@ -21,9 +21,16 @@
 ![Status](https://img.shields.io/badge/Status-Production_Ready-success)
 ![Design](https://img.shields.io/badge/Focus-System_Design-critical)
 
+
+
 ---
 
 A distributed, event-driven backend system for real-time 1v1 competitive coding, featuring room-based contests, asynchronous code execution, and live leaderboard updates.
+
+![System Preview](assets/1.png)
+
+Frontend Repository:  
+https://github.com/IamPritamAcharya/CodeComp-Frontend
 
 ---
 
