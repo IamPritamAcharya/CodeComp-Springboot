@@ -14,7 +14,7 @@ import lombok.RequiredArgsConstructor;
 
 @Configuration
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "redis.enabled", havingValue = "true")
+@ConditionalOnProperty(name = "redis.enabled", havingValue = "true", matchIfMissing = false)
 public class RedisListenerConfig {
     private final RedisSubscriber subscriber;
 
@@ -23,6 +23,7 @@ public class RedisListenerConfig {
             RedisConnectionFactory connectionFactory) {
 
         RedisMessageListenerContainer container = new RedisMessageListenerContainer();
+        container.setAutoStartup(false);
 
         container.setConnectionFactory(connectionFactory);
 
