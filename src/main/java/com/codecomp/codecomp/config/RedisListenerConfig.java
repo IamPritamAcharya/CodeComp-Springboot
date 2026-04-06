@@ -1,5 +1,6 @@
 package com.codecomp.codecomp.config;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -12,8 +13,8 @@ import com.codecomp.codecomp.redis.RedisSubscriber;
 import lombok.RequiredArgsConstructor;
 
 @Configuration
-@Profile("!prod")
 @RequiredArgsConstructor
+@ConditionalOnProperty(name = "redis.enabled", havingValue = "true")
 public class RedisListenerConfig {
     private final RedisSubscriber subscriber;
 
