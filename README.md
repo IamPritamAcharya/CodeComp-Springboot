@@ -32,6 +32,9 @@ A distributed, event-driven backend system for real-time 1v1 competitive coding,
 Frontend Repository:  
 https://github.com/IamPritamAcharya/CodeComp-Frontend
 
+Deployed Site:  
+https://codecompdev.netlify.app
+
 ---
 
 ## Overview
