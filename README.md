@@ -27,13 +27,32 @@
 
 A distributed, event-driven backend system for real-time 1v1 competitive coding, featuring room-based contests, asynchronous code execution, and live leaderboard updates.
 
-![System Preview](assets/1.png)
 
 Frontend Repository:  
 https://github.com/IamPritamAcharya/CodeComp-Frontend
 
 Deployed Site:  
 https://codecompdev.netlify.app
+
+<p align="center">
+  <img src="assets/1.png" width="90%" style="border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.25); margin: 8px;"/>
+</p>
+
+
+<p align="center">
+  <img src="assets/2.png" width="45%" style="border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); margin: 6px;"/>
+  <img src="assets/3.png" width="45%" style="border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); margin: 6px;"/>
+</p>
+
+<p align="center">
+  <img src="assets/4.png" width="45%" style="border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); margin: 6px;"/>
+  <img src="assets/5.png" width="45%" style="border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); margin: 6px;"/>
+</p>
+
+<p align="center">
+  <img src="assets/6.png" width="45%" style="border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); margin: 6px;"/>
+  <img src="assets/7.png" width="45%" style="border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); margin: 6px;"/>
+</p>
 
 ---
 
