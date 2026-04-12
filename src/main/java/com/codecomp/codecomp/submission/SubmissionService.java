@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.HttpEntity;
@@ -20,8 +21,9 @@ import com.codecomp.codecomp.repository.ParticipantRepository;
 import com.codecomp.codecomp.repository.RoomProblemRepository;
 import com.codecomp.codecomp.repository.RoomRepository;
 import com.codecomp.codecomp.repository.SubmissionRepository;
+
 import lombok.RequiredArgsConstructor;
-import tools.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Service
 @RequiredArgsConstructor
@@ -36,6 +38,9 @@ public class SubmissionService {
     private final ObjectMapper objectMapper;
     private final JudgePublisher judgePublisher;
     private final RateLimitService rateLimitService;
+
+    @Value("${judge0.url}")
+    private String judgeUrl;
 
     public Map<String, Object> submit(SubmissionRequest req) {
 
@@ -80,6 +85,7 @@ public class SubmissionService {
 
         submissionRepository.save(submission);
 
+        // send to RabbitMQ queue
         judgePublisher.send(submission.getId());
 
         Map<String, Object> result = new HashMap<>();
@@ -104,7 +110,7 @@ public class SubmissionService {
         HttpEntity<String> entity = new HttpEntity<>(jsonBody, headers);
 
         ResponseEntity<String> response = restTemplate.postForEntity(
-                "http://judge0:2358/submissions?base64_encoded=false&wait=false",
+                judgeUrl + "/submissions?base64_encoded=false&wait=false",
                 entity,
                 String.class);
 
@@ -120,7 +126,7 @@ public class SubmissionService {
             Thread.sleep(1000);
 
             Map<String, Object> result = restTemplate.getForObject(
-                    "http://judge0:2358/submissions/" + token + "?base64_encoded=false",
+                    judgeUrl + "/submissions/" + token + "?base64_encoded=false",
                     Map.class);
 
             Map<String, Object> status = (Map<String, Object>) result.get("status");
