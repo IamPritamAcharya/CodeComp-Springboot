@@ -21,7 +21,7 @@ import com.codecomp.codecomp.repository.RoomProblemRepository;
 import com.codecomp.codecomp.repository.RoomRepository;
 import com.codecomp.codecomp.repository.SubmissionRepository;
 import lombok.RequiredArgsConstructor;
-import tools.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Service
 @RequiredArgsConstructor
